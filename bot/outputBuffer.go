@@ -8,12 +8,15 @@ import (
 )
 
 type outputBuffer struct {
+	msg chan string
 	mu  sync.Mutex
 	buf bytes.Buffer
 }
 
 func newOutputBuffer() *outputBuffer {
-	ob := &outputBuffer{}
+	ob := &outputBuffer{
+		msg: make(chan string, 1),
+	}
 	go ob.send()
 	return ob
 }
@@ -25,7 +28,7 @@ func (ob *outputBuffer) WriteString(s string) {
 }
 
 func (ob *outputBuffer) send() {
-	tick := time.Tick(2 * time.Second)
+	tick := time.Tick(time.Second)
 	for {
 		<-tick
 
@@ -36,8 +39,9 @@ func (ob *outputBuffer) send() {
 		if line == "" {
 			continue
 		}
-		line = strings.Replace(line, "\n", " ", -1)
-		line = strings.TrimSuffix(line, "  >")
-		//send message?
+		line = strings.Replace(line, "\n\n", " - ", -1)
+		line = strings.Replace(line, "\n", " - ", -1)
+		line = strings.TrimSuffix(line, " - >")
+		ob.msg <- line
 	}
 }

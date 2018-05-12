@@ -70,8 +70,19 @@ func (b *Bot) OpenStory(path string) error {
 func (b *Bot) Run() {
 	go b.connection.Loop()
 	<-b.joined // Wait until we join the room
+	go b.watchOutput()
 	if err := b.machine.Run(); err != nil {
 		panic(err)
+	}
+}
+
+func (b *Bot) watchOutput() {
+	for {
+		msg := <-b.outputBuffer.msg
+		if msg == "" {
+			continue
+		}
+		b.connection.Privmsg(b.Room, msg)
 	}
 }
 
@@ -99,7 +110,6 @@ func (b *Bot) Output(window int, s string) error {
 	}
 	_, err := fmt.Print(s)
 	b.outputBuffer.WriteString(s)
-	// b.connection.Privmsg(b.Room, s)
 	return err
 }
 
@@ -124,7 +134,6 @@ func (b *Bot) join(e *irc.Event) {
 
 //TODO: Cleanup
 func (b *Bot) mention(e *irc.Event) {
-	// go func(e *irc.Event) {
 	lower := strings.ToLower(e.Message())
 
 	if strings.HasPrefix(lower, b.Nick) {
@@ -142,9 +151,7 @@ func (b *Bot) mention(e *irc.Event) {
 			}
 		}
 
+		fmt.Println(lower)
 		b.inputBuffer.WriteString(lower + "\n")
-		// fmt.Println(lower)
-		// b.connection.Privmsg(e.Arguments[0], fmt.Sprintf("%s said '%s'", e.Nick, message))
 	}
-	// }(e)
 }
