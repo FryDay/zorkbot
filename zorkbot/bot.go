@@ -9,13 +9,15 @@ import (
 	"strings"
 
 	"bitbucket.org/zombiezen/gonorth/north"
+	"github.com/FryDay/zorkbot/config"
 	"github.com/thoj/go-ircevent"
 )
 
 // Bot ...
 type Bot struct {
 	Nick         string
-	Room         string
+	Channel      string
+	Password     string
 	Server       *Server
 	machine      *north.Machine
 	joined       chan bool
@@ -25,28 +27,29 @@ type Bot struct {
 }
 
 // NewBot ...
-func NewBot(nick, room, serverURL string, serverPort int64) (*Bot, error) {
+func NewBot(conf *config.Config) (*Bot, error) {
 	var err error
-	newConnection := irc.IRC(nick, nick)
+	newConnection := irc.IRC(conf.Bot.Nick, conf.Bot.Nick)
 	// newConnection.Debug = true
 	newConnection.UseTLS = true
-	newConnection.TLSConfig = &tls.Config{}
+	newConnection.TLSConfig = &tls.Config{InsecureSkipVerify: true}
 
 	newBot := &Bot{
-		Nick:         nick,
-		Room:         room,
+		Nick:         conf.Bot.Nick,
+		Channel:      conf.Bot.Channel,
+		Password:     conf.Bot.Password,
 		joined:       make(chan bool, 1),
 		inputBuffer:  newInputBuffer(),
 		outputBuffer: newOutputBuffer(),
 		connection:   newConnection,
 	}
 
-	newBot.Server, err = NewServer(serverURL, serverPort)
+	newBot.Server, err = NewServer(conf.Bot.Server, conf.Bot.Port)
 	if err != nil {
 		return nil, err
 	}
 
-	newBot.connection.AddCallback("001", func(e *irc.Event) { newBot.connection.Join(room) })
+	newBot.connection.AddCallback("001", func(e *irc.Event) { newBot.connection.Join(conf.Bot.Channel) })
 	newBot.connection.AddCallback("JOIN", newBot.join)
 	newBot.connection.AddCallback("PRIVMSG", newBot.mention)
 	if err = newBot.connection.Connect(newBot.Server.String()); err != nil {
@@ -97,7 +100,7 @@ func (b *Bot) watchOutput() {
 		if msg == "" {
 			continue
 		}
-		b.connection.Privmsg(b.Room, msg)
+		b.connection.Privmsg(b.Channel, msg)
 	}
 }
 
@@ -144,7 +147,14 @@ func (b *Bot) Restore(m *north.Machine) error {
 }
 
 func (b *Bot) join(e *irc.Event) {
+	if b.Password != "" {
+		b.connection.Privmsgf("NickServ", "identify %s", b.Password)
+	}
 	b.joined <- true
+}
+
+func (b *Bot) login(e *irc.Event) {
+
 }
 
 //TODO: Cleanup

@@ -11,6 +11,9 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
+# Config
+zorkbot.toml
+
 # Folders
 /vendor
 /stories

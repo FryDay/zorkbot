@@ -28,7 +28,7 @@ func (ob *outputBuffer) WriteString(s string) {
 }
 
 func (ob *outputBuffer) send() {
-	tick := time.Tick(time.Second)
+	tick := time.Tick(time.Millisecond * 200)
 	for {
 		<-tick
 
