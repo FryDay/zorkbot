@@ -158,10 +158,6 @@ func (b *Bot) join(e *irc.Event) {
 	b.joined <- true
 }
 
-func (b *Bot) login(e *irc.Event) {
-
-}
-
 func (b *Bot) mention(e *irc.Event) {
 	lower := strings.ToLower(e.Message())
 
