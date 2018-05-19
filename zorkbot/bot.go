@@ -3,6 +3,7 @@ package zorkbot
 import (
 	"crypto/tls"
 	"fmt"
+	"io"
 	"os"
 	"regexp"
 	"strings"
@@ -71,8 +72,22 @@ func (b *Bot) Run() {
 	go b.connection.Loop()
 	<-b.joined // Wait until we join the room
 	go b.watchOutput()
-	if err := b.machine.Run(); err != nil {
-		panic(err)
+	err := b.OpenStory("./stories/zork1.z5")
+	for {
+		err = b.machine.Run()
+		switch err {
+		case io.EOF, north.ErrQuit:
+			os.Exit(0)
+		case north.ErrRestart:
+			err = b.OpenStory("./stories/zork1.z5")
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+			}
+		default:
+			fmt.Fprintln(os.Stderr, "** Internal Error:", err)
+			os.Exit(1)
+		}
 	}
 }
 

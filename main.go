@@ -9,9 +9,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	if err = zorkBot.OpenStory("./stories/zork1.z5"); err != nil {
-		panic(err)
-	}
 
 	zorkBot.Run()
 }
