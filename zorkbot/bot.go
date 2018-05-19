@@ -1,6 +1,7 @@
 package zorkbot
 
 import (
+	"bufio"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -80,6 +81,7 @@ func (b *Bot) Run() {
 	go b.connection.Loop()
 	<-b.joined // Wait until we join the room
 	go b.watchOutput()
+	go b.watchInput()
 	err := b.OpenStory("./stories/zork1.z5")
 	for {
 		err = b.machine.Run()
@@ -106,6 +108,17 @@ func (b *Bot) watchOutput() {
 			continue
 		}
 		b.connection.Privmsg(b.Channel, msg)
+	}
+}
+
+func (b *Bot) watchInput() {
+	in := bufio.NewReader(os.Stdin)
+	for {
+		line, _, _ := in.ReadLine()
+		if string(line) == "" {
+			continue
+		}
+		b.inputBuffer.WriteString(string(line) + "\n")
 	}
 }
 
@@ -163,9 +176,28 @@ func (b *Bot) mention(e *irc.Event) {
 
 	if strings.HasPrefix(lower, b.Nick) {
 		message := strings.TrimSpace(strings.Replace(e.Message(), b.nickRegex.FindString(e.Message()), "", 1))
-		lower = strings.ToLower(message)
+		lower = strings.ToLower(message + "\n")
 
 		fmt.Println(lower)
-		b.inputBuffer.WriteString(lower + "\n")
+		switch lower {
+		case "\n":
+			break
+
+		case "help\n":
+			b.help()
+
+		case "quit\n":
+			break
+
+		case "restart\n":
+			break
+
+		default:
+			b.inputBuffer.WriteString(lower)
+		}
 	}
+}
+
+func (b *Bot) help() {
+	fmt.Println("Help")
 }
