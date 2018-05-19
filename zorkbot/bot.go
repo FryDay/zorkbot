@@ -19,6 +19,7 @@ type Bot struct {
 	Channel      string
 	Password     string
 	Server       *Server
+	nickRegex    *regexp.Regexp
 	machine      *north.Machine
 	joined       chan bool
 	inputBuffer  *inputBuffer
@@ -42,6 +43,10 @@ func NewBot(conf *config.Config) (*Bot, error) {
 		inputBuffer:  newInputBuffer(),
 		outputBuffer: newOutputBuffer(),
 		connection:   newConnection,
+	}
+
+	if newBot.nickRegex, err = regexp.Compile(`^[^:, ]+[:, ]`); err != nil {
+		return nil, err
 	}
 
 	newBot.Server, err = NewServer(conf.Bot.Server, conf.Bot.Port)
@@ -157,24 +162,12 @@ func (b *Bot) login(e *irc.Event) {
 
 }
 
-//TODO: Cleanup
 func (b *Bot) mention(e *irc.Event) {
 	lower := strings.ToLower(e.Message())
 
 	if strings.HasPrefix(lower, b.Nick) {
-		var regex = regexp.MustCompile(`^[^:, ]+[:, ]`)
-
-		message := strings.TrimSpace(strings.Replace(e.Message(), regex.FindString(e.Message()), "", 1))
+		message := strings.TrimSpace(strings.Replace(e.Message(), b.nickRegex.FindString(e.Message()), "", 1))
 		lower = strings.ToLower(message)
-		if strings.HasPrefix(lower, b.Nick) {
-			for {
-				message = strings.Replace(message, b.Nick, "", 1)
-				lower = strings.ToLower(message)
-				if !strings.HasPrefix(lower, b.Nick) {
-					break
-				}
-			}
-		}
 
 		fmt.Println(lower)
 		b.inputBuffer.WriteString(lower + "\n")
